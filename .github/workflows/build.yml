@@ -1,0 +1,33 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-21.04
+    steps:
+    - uses: actions/checkout@v2
+`   - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Check last secret updates
+      run: |
+        echo "CTX_ROGER: " + ${{ secrets.CTX_ROGER }}
+        echo "CTX_ROGER_B64: " + ${{ secrets.$CTX_ROGER_B64 }}
+        echo "CTX_ROGER_B64 DECODED: "`echo {{ $secrets.CTX_ROGER_B64 }} | base64 -d`
+    - name: Test secret updating
+      run: |
+        python update_github_secret.py --name ROGER -v THUS_$GITHUB_RUN_ID
+        python update_github_secret.py --name ROGER -v THUS_$GITHUB_RUN_ID -b true
+
+        echo "Howdy there, partner! $GITHUB_RUN_ID" > file.txt
+
+        python update_github_secret.py --name FILED -f file.txt
+        python update_github_secret.py --name FILED -f file.txt -b true
