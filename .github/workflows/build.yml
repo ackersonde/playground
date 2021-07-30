@@ -20,8 +20,8 @@ jobs:
     - name: Check last secret updates
       run: |
         echo "CTX_ROGER: " + ${{ secrets.CTX_ROGER }}
-        echo "CTX_ROGER_B64: " + ${{ secrets.$CTX_ROGER_B64 }}
-        echo "CTX_ROGER_B64 DECODED: "`echo {{ $secrets.CTX_ROGER_B64 }} | base64 -d`
+        echo "CTX_ROGER_B64: " + ${{ secrets.CTX_ROGER_B64 }}
+        echo "CTX_ROGER_B64 DECODED: "`echo ${{ secrets.CTX_ROGER_B64 }} | base64 -d`
     - name: Test secret updating
       run: |
         python update_github_secret.py --name ROGER -v THUS_$GITHUB_RUN_ID
