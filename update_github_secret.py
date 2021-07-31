@@ -16,7 +16,7 @@ import sys
 
 GITHUB_APP_CLIENT_ID = os.environ['GITHUB_APP_CLIENT_ID']
 GITHUB_INSTALL_ID = os.environ['GITHUB_INSTALL_ID']
-GITHUB_SECRETS_PK_PEM_FILE = os.environ['GITHUB_SECRETS_PK_PEM_FILE']
+GITHUB_SECRETS_PK_PEM = os.environ['GITHUB_SECRETS_PK_PEM']
 
 
 def fatal(message):
@@ -26,14 +26,14 @@ def fatal(message):
 
 # Token Exchange requires a JWT in the Auth Bearer header with this format
 def generate_id_token(iss, expire_seconds=600):
-    raw_pem_key = open(GITHUB_SECRETS_PK_PEM_FILE, "r").read()
-    signing_key = serialization.load_pem_private_key(raw_pem_key.encode(), password=None)
+    #raw_pem_key = open(GITHUB_SECRETS_PK_PEM_FILE, "r").read()
+    signing_key = serialization.load_pem_private_key(GITHUB_SECRETS_PK_PEM.encode(), password=None)
 
     token = jwt.encode(
         {'iss': iss, 'iat': int(time()), 'exp': int(time()) + expire_seconds},
         signing_key, algorithm='RS256')
 
-    key = RSA.import_key(raw_pem_key)
+    key = RSA.import_key(GITHUB_SECRETS_PK_PEM)
     decoded = jwt.decode(token, key.public_key().export_key(), algorithms=['RS256'])
     if decoded['iss'] != iss:
         raise ValueError('Invalid token')
