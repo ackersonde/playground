@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from io import StringIO
 from nacl import encoding, public
-from paramiko import RSAKey, ssh_exception
+from Crypto.PublicKey import RSA
+from cryptography.hazmat.primitives import serialization
 from pathlib import Path
 from requests.exceptions import HTTPError
 from time import time
@@ -24,27 +25,20 @@ def fatal(message):
 
 
 # Token Exchange requires a JWT in the Auth Bearer header with this format
-def generate_id_token(iss, private_key, expire_seconds=600):
-    new_jwt = jwt.encode(
+def generate_id_token(iss, expire_seconds=600):
+    raw_pem_key = open(GITHUB_SECRETS_PK_PEM_FILE, "r").read()
+    signing_key = serialization.load_pem_private_key(raw_pem_key.encode(), password=None)
+
+    token = jwt.encode(
         {'iss': iss, 'iat': int(time()), 'exp': int(time()) + expire_seconds},
-        private_key, algorithm='RS256')
-    # python3 jwt returns bytes, so we need to decode to string
-    return new_jwt.decode()
+        signing_key, algorithm='RS256')
 
+    key = RSA.import_key(raw_pem_key)
+    decoded = jwt.decode(token, key.public_key().export_key(), algorithms=['RS256'])
+    if decoded['iss'] != iss:
+        raise ValueError('Invalid token')
 
-# Load the private key from a file and decrypt if necessary
-def get_private_key(file_name, password=None) -> str:
-    try:
-        rsa_key = RSAKey.from_private_key_file(file_name, password)
-    except ssh_exception.PasswordRequiredException:
-        fatal('Password protected key file')
-    except ssh_exception.SSHException:
-        fatal('Invalid private key password')
-    except FileNotFoundError:
-        fatal('Could not find private key file')
-    with StringIO() as buf:
-        rsa_key.write_private_key(buf)
-        return buf.getvalue()
+    return token
 
 
 def encrypt(public_key: str, secret_value: str) -> str:
@@ -113,9 +107,7 @@ def main():
 
     print(args)
 
-    # Generate a new JWT using id and private key
-    pri_key = get_private_key(GITHUB_SECRETS_PK_PEM_FILE)
-    id_token = generate_id_token(GITHUB_APP_CLIENT_ID, pri_key)
+    id_token = generate_id_token(iss=GITHUB_APP_CLIENT_ID)
 
     # https://docs.github.com/en/free-pro-team@latest/rest/reference/actions#secrets
     try:
